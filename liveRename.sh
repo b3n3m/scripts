@@ -48,8 +48,10 @@ for i in "${arrFT[@]}"; do
 			echo "rename extension $f to ${f%.*}.${i}" >> $logFile
 		done
 	fi
-	checkExistence=$(ls -l *.${i} 2>/dev/null | wc -l)
-	if [[ $arg_fast == "true" && ${i} == "HEIC" || ${i} == "JPG" && $checkExistence -gt 0 ]];then
+	
+countAll=$(ls -l *.${i} 2>/dev/null | wc -l)
+
+	if [[ $arg_fast == "true" && ${i} == "HEIC" || ${i} == "JPG" && $countAll -gt 0 ]];then
 		
 # start fast track
 		echo "start fast track: ${i}"
@@ -65,8 +67,7 @@ for i in "${arrFT[@]}"; do
 
 # start slow track	
 echo "start slow track: ${i}"
-		countAll=$(ls -l *.${i} 2>/dev/null | wc -l)
-		count=0
+count=0
 		if [[ countAll -gt 0 ]];then
 
 			for f in *.${i}; do
