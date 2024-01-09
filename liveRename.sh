@@ -10,19 +10,20 @@ do
   shift
 
   case $arg in
-    -lo|--logoff)          # generate no lofile
-      ;;
+    -lo|--logoff)          # generate no logfile
+	arg_noLog=1
+    ;;
 
     -p|--path)             # define path to picture
-      arg_path=${1:-}
-      shift
-      ;;
+    arg_path=${1:-}
+	shift
+	;;
 
     -f|--fast)             # do not loop and open exiftool everytime -> no security
-      arg_fast=true
-	  confirmFast=${1:-}
-	  shift
-      ;;
+	arg_fast=true
+	confirmFast=${1:-}
+	shift
+	;;
 
     *)
       # undefined argument if argument starts with - (dash)
@@ -34,7 +35,16 @@ do
   esac
 done
 
-arrFT=(HEIC JPG MOV PNG MP4)
+if [[ -n $arg_path ]]; then
+	cd $arg_path
+fi
+
+if [ -n ${arg_noLog} ]; then
+	echo "No Logfile, write into \"/dev/null\""
+	logFile='/dev/null'
+fi
+
+arrFT=(HEIC JPG JPEG MOV PNG MP4)
 echo "START renaming: $runDate" > $logFile
 
 for i in "${arrFT[@]}"; do
@@ -42,6 +52,7 @@ for i in "${arrFT[@]}"; do
 
 # convert extensions
 	small=$(ls -l *.${i,,} 2>/dev/null | wc -l)
+	echo "lines = $small" >> $logFile
 	if [[ $small -gt 0 ]]; then
 		for f in *.${i,,}; do
 			mv ${f} ${f%.*}.${i}
@@ -50,8 +61,8 @@ for i in "${arrFT[@]}"; do
 	fi
 	
 countAll=$(ls -l *.${i} 2>/dev/null | wc -l)
-
-	if [[ $arg_fast == "true" && ${i} == "HEIC" || ${i} == "JPG" && $countAll -gt 0 ]];then
+	echo "[DEBUG] ARG-FAST = $arg_fast"
+	if [[ $arg_fast == "true" && (${i} == "HEIC" || ${i} == "JPG") && $countAll -gt 0 ]];then
 		
 # start fast track
 		echo "start fast track: ${i}"
@@ -71,6 +82,7 @@ count=0
 		if [[ countAll -gt 0 ]];then
 
 			for f in *.${i}; do
+				echo "[DEBUG] File: ${f}" #>> $logFile
 		# check for correct exif data
 				if [[ ${i} == "MOV" ]];then
 					name=`exiftool -s -s -s -P -'CreationDate' -d %Y%m%d_%H%M%S $f`		
@@ -80,18 +92,23 @@ count=0
 					name=`exiftool -s -s -s -P -'DateTimeOriginal' -d %Y%m%d_%H%M%S $f`
 				fi
 		# if exif data not found	
-				if [[ -z $name ]]; then 
-					name="failure_${f%.*}" 
+				if [[ -z $name ]]; then
+					if [[ $f == failure_* ]];then
+						name="${f%.*}"
+					else
+						name="failure_${f%.*}" 
+					fi
 				fi
-				
 		# if files already in place
-				j=1; while [[ -f "$name.${j}" ]]; do
+				# echo "test filename: $name.${i}"
+				j=1; while [[ -f ${name}.${i} ]]; do
 					name="${name}_${j}"
 				done
 
+				echo "Name: ${name}" >> $logFile
 		# rename Picture
-				mv ${f} ${name}.${i} 2>/dev/null
 				echo "rename $f to ${name}.${i}" >> $logFile
+				mv ${f} ${name}.${i} 2>/dev/null
 			
 		# rename Live Picture
 				if [[ $i -eq "HEIC" && -f ${f%.*}.MOV ]];then
